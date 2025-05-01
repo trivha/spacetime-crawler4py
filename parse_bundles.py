@@ -4,18 +4,18 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urldefrag
 from collections import Counter, defaultdict
 
-# Trackers
+# global trackers
 word_counter = Counter()
 page_word_counts = {}
 unique_urls = set()
 subdomain_counts = defaultdict(set)
 longest_page = {"url": "", "count": 0}
 
-# Stopwords
+# stopwords
 with open("stopwords.txt") as f:
     stopwords = set(word.strip().lower() for word in f.readlines())
 
-# Helpers
+# helpers
 def extract_visible_text(soup):
     for element in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
         element.decompose()
@@ -57,13 +57,13 @@ def parse_saved_bundles():
                 content = f.read()
 
             sections = re.split(r'<!-- START PAGE: (.*?) -->', content)
-            # Format: ['', url1, html1, url2, html2, ...]
+            # format: ['', url1, html1, url2, html2, ...]
             for i in range(1, len(sections) - 1, 2):
                 url = sections[i].strip()
                 html = sections[i + 1].split("<!-- END PAGE", 1)[0]
                 process_html_section(html, url)
 
-    # Report
+    # final report
     print("\n--- POST-BUNDLE REPORT ---\n")
     print(f"1. Number of unique pages: {len(unique_urls)}")
     print(f"2. Longest page: {longest_page['url']} with {longest_page['count']} words")
