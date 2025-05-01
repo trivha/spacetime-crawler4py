@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urldefrag, urljoin
 import re, os, hashlib
 
-# --- Globals for tracking ---
+# global variables
 word_counter = Counter()
 page_word_counts = {}
 dynamic_traps = set()
@@ -11,17 +11,18 @@ subdomain_counts = {}
 unique_urls = set()
 longest_page = {"url": "", "count": 0}
 
-# --- Directory for saving HTML pages ---
+# making directory for locally saved html
 SAVE_DIR = "saved_pages"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-# --- Load stop words ---
+# adding stopwords.txt
 with open("stopwords.txt") as f:
     stopwords = set(word.strip().lower() for word in f.readlines())
 
 def compute_checksum(content):
         return hashlib.sha256(content).hexdigest()
-# --- Batching Config ---
+
+# making bundles for parsing
 BUNDLE_SIZE = 20
 BUNDLE_FILE_INDEX = 0
 BUNDLE_PAGE_COUNT = 0
@@ -34,8 +35,6 @@ def save_page_locally(url, content):
     with open(os.path.join(SAVE_DIR, "checksums.txt"), "a") as cf:
         cf.write(f"{checksum} {url}\n")
 
-
-
     if BUNDLE_PAGE_COUNT >= BUNDLE_SIZE:
         BUNDLE_FILE_INDEX += 1
         BUNDLE_PAGE_COUNT = 0
@@ -47,8 +46,6 @@ def save_page_locally(url, content):
         f.write(f"\n<!-- END PAGE: {url} -->\n".encode('utf-8'))
 
     BUNDLE_PAGE_COUNT += 1
-
-
 
 # --- Trap Helpers ---
 def record_bad_page(url):
@@ -78,7 +75,7 @@ def is_trap(url):
             return True
     return False
 
-# --- Main Scraper Entry Point ---
+# main functions for scraper, frontier
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
@@ -95,7 +92,7 @@ def extract_next_links(url, resp):
     if 'text/html' not in content_type:
         return []
 
-    # Save HTML locally
+    # save HTML locally
     save_page_locally(url, resp.raw_response.content)
 
     links = set()
@@ -140,7 +137,7 @@ def extract_next_links(url, resp):
 
     return list(links)
 
-# --- Utility Functions ---
+# utility functions
 def extract_visible_text(soup):
     for element in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
         element.decompose()
@@ -166,6 +163,12 @@ def is_valid(url):
             return False
         if "doku.php" in url and any(param in url for param in ["rev=", "do=", "difftype", "ns="]):
             return False
+        if any(substring in parsed.query for substring in ["version=", "format=", "precision=", "from="]):
+            return False
+        if "timeline" in parsed.path:
+            return False
+        if re.search(r'calendar|event|events|schedule|page=\d+', url.lower()):
+            return False
 
         if re.search(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -178,6 +181,7 @@ def is_valid(url):
             r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower()):
             return False
         return True
+
     except TypeError:
         print("TypeError for", url)
         return False
